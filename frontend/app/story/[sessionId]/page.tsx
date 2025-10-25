@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useStoryStore } from '../../lib/store';
 import { uploadPhoto, getNextPage, checkImageStatus, trackInteraction, generateBook } from '../../lib/api';
 import { vapiClient } from '../../lib/vapi';
@@ -49,6 +49,7 @@ export default function StoryPage() {
     panel1: null
   });
   const [isDemoMode, setIsDemoMode] = useState(false);
+  const isProcessingResponseRef = useRef(false);
 
   // Initialize session and start Vapi immediately (skip photo upload for testing)
   useEffect(() => {
@@ -113,22 +114,37 @@ export default function StoryPage() {
         }
         
         // Track user messages and trigger image generation
-        if (message.type === 'transcript' && message.role === 'user') {
-          console.log('👦 Kid says:', message.transcript);
+        // IMPORTANT: Only process FINAL transcripts to avoid duplicates
+        if (message.type === 'transcript' && message.role === 'user' && message.transcriptType === 'final') {
+          console.log('👦 Kid says (FINAL):', message.transcript);
+          
+          // Prevent processing if already handling a response
+          if (isProcessingResponseRef.current) {
+            console.log('⚠️ Already processing a response, skipping...');
+            return;
+          }
+          
+          isProcessingResponseRef.current = true;
           setLastTranscript(message.transcript);
           setIsListening(false);
+          
+          // Get current page from store to avoid stale closure
+          const currentPageValue = useStoryStore.getState().currentPage;
+          console.log('📄 Using current page from store:', currentPageValue);
           
           // Track interaction for analytics
           trackInteraction({
             sessionId,
-            pageNumber: currentPage,
+            pageNumber: currentPageValue,
             interactionType: 'voice_input',
             userInput: message.transcript,
             responseTimeMs: Date.now()
           }).catch(err => console.log('Track error:', err));
           
           // Generate images for this conversation turn
-          generateImagesForConversation(message.transcript);
+          generateImagesForConversation(message.transcript).finally(() => {
+            isProcessingResponseRef.current = false;
+          });
         }
       },
       onError: (error: any) => {
@@ -161,24 +177,28 @@ export default function StoryPage() {
             alert('Could not start voice. Please check microphone permissions and refresh.');
           });
       });
-  }, [vapiInitialized, setCaptainSpeaking, startInteraction, timeoutId]);
+  }, [vapiInitialized, setCaptainSpeaking, startInteraction, timeoutId, sessionId]);
 
   // Generate images based on conversation
-  const generateImagesForConversation = async (kidResponse: string) => {
+  const generateImagesForConversation = async (kidResponse: string): Promise<void> => {
+    // Get current page from store to avoid stale closure
+    const currentPageFromStore = useStoryStore.getState().currentPage;
+    const currentOptionsFromStore = useStoryStore.getState().suggestedOptions;
+    
     console.log('🎨 Generating images for conversation turn...');
     console.log('   Session ID:', sessionId);
-    console.log('   Current Page:', currentPage);
+    console.log('   Current Page (from store):', currentPageFromStore);
     console.log('   Kid Response:', kidResponse);
-    console.log('   Suggested Options:', suggestedOptions);
+    console.log('   Suggested Options:', currentOptionsFromStore);
     
     try {
       // Call backend to get next page and generate images
       const payload = {
         sessionId,
-        currentPage,
+        currentPage: currentPageFromStore, // Use store value
         kidResponse,
         responseTime: Date.now(),
-        suggestedOptions: suggestedOptions || []
+        suggestedOptions: currentOptionsFromStore || []
       };
       
       console.log('📤 Sending to backend:', payload);
@@ -188,6 +208,8 @@ export default function StoryPage() {
       console.log('📦 Backend response:', nextPageData);
 
       if (nextPageData.success) {
+        console.log(`✅ Page progression: ${currentPageFromStore} → ${nextPageData.pageNumber}`);
+        
         // Update page number first
         setCurrentPage(nextPageData.pageNumber);
         
@@ -200,23 +222,26 @@ export default function StoryPage() {
           );
         }
         
-        // Handle images if they exist
+        // Handle images if they exist (only 1 image per page)
         if (nextPageData.imageIds && nextPageData.imageIds.panel1) {
-          console.log('✅ Image generation initiated:', nextPageData.imageIds);
+          console.log('✅ Image generation initiated (1 image):', nextPageData.imageIds.panel1);
           
           // Start loading images
           setImagesLoading(true);
-          setImageTaskIds(nextPageData.imageIds);
+          setImageTaskIds({ panel1: nextPageData.imageIds.panel1 });
           setPanelUrls(null, null);
           
           // Poll for images
-          pollForImages(nextPageData.imageIds, nextPageData.pageNumber);
+          pollForImages({ panel1: nextPageData.imageIds.panel1 }, nextPageData.pageNumber);
+        } else {
+          console.log('ℹ️ No images to generate for page', nextPageData.pageNumber);
         }
       } else {
         console.log('⚠️ Backend request failed:', nextPageData);
       }
     } catch (error) {
       console.error('❌ Error generating images:', error);
+      throw error; // Re-throw to trigger finally block
     }
   };
 

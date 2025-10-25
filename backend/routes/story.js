@@ -9,6 +9,9 @@ const imageGenerationTasks = new Map();
 
 // POST /api/story/next-page - Progress to next story page
 router.post('/next-page', async (req, res) => {
+  const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  console.log(`\n🔵 [${requestId}] NEW REQUEST - Next Page`);
+  
   try {
     const {
       sessionId,
@@ -18,7 +21,16 @@ router.post('/next-page', async (req, res) => {
       suggestedOptions
     } = req.body;
 
+    console.log(`📥 [${requestId}] Request data:`, {
+      sessionId: sessionId?.substring(0, 8) + '...',
+      currentPage,
+      nextPage: currentPage + 1,
+      kidResponse: kidResponse?.substring(0, 50) + '...',
+      hasOptions: !!suggestedOptions
+    });
+
     if (!sessionId || currentPage === undefined) {
+      console.log(`❌ [${requestId}] Missing required fields`);
       return res.status(400).json({
         success: false,
         error: 'Missing required fields'
@@ -26,6 +38,7 @@ router.post('/next-page', async (req, res) => {
     }
 
     const nextPage = currentPage + 1;
+    console.log(`➡️  [${requestId}] Page progression: ${currentPage} → ${nextPage}`);
 
     // Get session to retrieve photo URL
     const session = await db.getSession(sessionId);
@@ -79,9 +92,11 @@ router.post('/next-page', async (req, res) => {
     const pageContent = storyGenerator.getPageContent(nextPage, chosenPlanet);
 
     // Generate images asynchronously (except for page 1 and 5)
+    // IMPORTANT: Only generating ONE image per page
     let panel1TaskId = null;
 
     if (nextPage >= 2 && nextPage <= 4) {
+      console.log(`🎨 [${requestId}] Starting SINGLE image generation for page ${nextPage}`);
       const photoPath = session.kid_photo_url || null; // Optional - use if available
 
       try {
@@ -92,24 +107,27 @@ router.post('/next-page', async (req, res) => {
           chosenPlanet
         );
         
-        console.log('🎨 Generating DYNAMIC image for page', nextPage);
-        console.log('📍 Destination mentioned:', dynamicPrompt.destination);
-        console.log('💬 Kid said:', dynamicPrompt.context);
-        console.log('🖼️ Image prompt:', dynamicPrompt.prompt.substring(0, 100) + '...');
+        console.log(`🎨 [${requestId}] DYNAMIC image for page ${nextPage}`);
+        console.log(`📍 [${requestId}] Destination:`, dynamicPrompt.destination);
+        console.log(`💬 [${requestId}] Kid said:`, dynamicPrompt.context?.substring(0, 50) + '...');
+        console.log(`🖼️  [${requestId}] Image prompt:`, dynamicPrompt.prompt.substring(0, 100) + '...');
         
         // Start image generation with Gemini using dynamic prompt
+        // ONLY ONE IMAGE PER PAGE
         const result1 = await geminiService.generateImage(dynamicPrompt.prompt, photoPath);
         
         panel1TaskId = result1.taskId;
 
-        console.log('✅ Image task created:', {panel1TaskId});
+        console.log(`✅ [${requestId}] SINGLE image task created:`, panel1TaskId);
 
         // Store task ID for polling (Gemini completes immediately, but keeping for compatibility)
         imageGenerationTasks.set(`${sessionId}-${nextPage}-panel1`, panel1TaskId);
       } catch (error) {
-        console.error('❌ Error starting image generation:', error);
+        console.error(`❌ [${requestId}] Error starting image generation:`, error);
         // Continue without images - will use placeholders
       }
+    } else {
+      console.log(`ℹ️  [${requestId}] No images needed for page ${nextPage} (only pages 2-4 get images)`);
     }
 
     // Create story page record
@@ -126,7 +144,7 @@ router.post('/next-page', async (req, res) => {
       timeSpentSeconds: Math.floor((responseTime || 0) / 1000)
     });
 
-    res.json({
+    const response = {
       success: true,
       pageNumber: nextPage,
       storyText: pageContent.storyText,
@@ -135,10 +153,15 @@ router.post('/next-page', async (req, res) => {
       educationalConcept: pageContent.educationalConcept,
       panel1Status: panel1TaskId ? 'generating' : 'none',
       imageIds: {
-        panel1: panel1TaskId
+        panel1: panel1TaskId  // ONLY ONE IMAGE
       },
       chosenPlanet
-    });
+    };
+    
+    console.log(`✅ [${requestId}] Response sent - Page ${nextPage}, Images: ${panel1TaskId ? '1 image' : 'none'}`);
+    console.log(`🔚 [${requestId}] REQUEST COMPLETE\n`);
+    
+    res.json(response);
   } catch (error) {
     console.error('Error processing next page:', error);
     res.status(500).json({
