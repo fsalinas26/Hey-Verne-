@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useStoryStore } from '../../lib/store';
 import { uploadPhoto, getNextPage, checkImageStatus, trackInteraction, generateBook } from '../../lib/api';
 import { vapiClient } from '../../lib/vapi';
+import { demoVoiceClient } from '../../lib/demoMode';
 import PhotoUpload from '../../components/PhotoUpload';
 import StoryPanel from '../../components/StoryPanel';
 import VoiceIndicator from '../../components/VoiceIndicator';
@@ -44,6 +45,7 @@ export default function StoryPage() {
     panel1: null,
     panel2: null
   });
+  const [isDemoMode, setIsDemoMode] = useState(false);
 
   // Initialize session
   useEffect(() => {
@@ -56,7 +58,9 @@ export default function StoryPage() {
     try {
       const response = await uploadPhoto(sessionId, file);
       if (response.success) {
-        setPhotoUrl(response.photoUrl);
+        // Prepend API URL to photo path
+        const fullPhotoUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}${response.photoUrl}`;
+        setPhotoUrl(fullPhotoUrl);
         // Start Vapi after photo is uploaded
         initializeVapi();
       }
@@ -68,11 +72,11 @@ export default function StoryPage() {
     }
   };
 
-  // Initialize Vapi
+  // Initialize Voice (tries Vapi, falls back to Demo Mode)
   const initializeVapi = useCallback(() => {
     if (vapiInitialized) return;
 
-    vapiClient.initialize({
+    const callbacks = {
       onSpeechStart: () => {
         setCaptainSpeaking(true);
         setIsListening(false);
@@ -94,7 +98,7 @@ export default function StoryPage() {
         }, 10000);
         setTimeoutId(timeout);
       },
-      onMessage: (message) => {
+      onMessage: (message: any) => {
         if (message.type === 'transcript' && message.role === 'user') {
           setLastTranscript(message.transcript);
           // Clear timeout when kid responds
@@ -106,21 +110,38 @@ export default function StoryPage() {
           handleKidResponse(message.transcript);
         }
       },
-      onError: (error) => {
-        console.error('Vapi error:', error);
-        alert('Voice connection error. Please refresh and try again.');
+      onError: (error: any) => {
+        console.error('Voice error:', error);
       }
-    });
+    };
 
-    vapiClient.start(
-      "Hi! I'm Captain Verne, and I'll be your space explorer guide today! Before we blast off, let's take a picture of you so you can be the hero of this adventure!"
-    ).then(() => {
-      setVapiInitialized(true);
-      setCurrentPage(1);
-    }).catch(error => {
-      console.error('Failed to start Vapi:', error);
-      alert('Could not start voice assistant. Please check microphone permissions.');
-    });
+    const firstMessage = "Hi! I'm Captain Verne, and I'll be your space explorer guide today!";
+
+    // Try Vapi first
+    vapiClient.initialize(callbacks);
+    vapiClient.start(firstMessage)
+      .then(() => {
+        console.log('✅ Vapi started successfully');
+        setVapiInitialized(true);
+        setCurrentPage(1);
+      })
+      .catch(error => {
+        console.warn('⚠️ Vapi failed, switching to DEMO MODE:', error);
+        setIsDemoMode(true);
+        
+        // Switch to demo mode
+        demoVoiceClient.initialize(callbacks);
+        demoVoiceClient.start(firstMessage)
+          .then(() => {
+            console.log('🎭 Demo mode started successfully');
+            setVapiInitialized(true);
+            setCurrentPage(1);
+          })
+          .catch(demoError => {
+            console.error('Failed to start demo mode:', demoError);
+            alert('Could not start voice. Please check microphone permissions and refresh.');
+          });
+      });
   }, [vapiInitialized, setCaptainSpeaking, startInteraction, timeoutId]);
 
   // Handle kid's voice response
@@ -156,8 +177,12 @@ export default function StoryPage() {
           nextPageData.suggestedOptions
         );
 
-        // Tell Vapi to speak the next story segment
-        vapiClient.send(nextPageData.storyText);
+        // Tell voice client to speak the next story segment
+        if (isDemoMode) {
+          demoVoiceClient.send(nextPageData.storyText);
+        } else {
+          vapiClient.send(nextPageData.storyText);
+        }
 
         // If this is the last page, generate book
         if (nextPageData.pageNumber === 5) {
@@ -236,8 +261,12 @@ export default function StoryPage() {
     try {
       const bookResponse = await generateBook(sessionId);
       if (bookResponse.success) {
-        // Stop Vapi
-        await vapiClient.stop();
+        // Stop voice client
+        if (isDemoMode) {
+          await demoVoiceClient.stop();
+        } else {
+          await vapiClient.stop();
+        }
         // Navigate to book page
         router.push(`/book/${sessionId}`);
       }
@@ -252,9 +281,13 @@ export default function StoryPage() {
       if (timeoutId) {
         clearTimeout(timeoutId);
       }
-      vapiClient.stop();
+      if (isDemoMode) {
+        demoVoiceClient.stop();
+      } else {
+        vapiClient.stop();
+      }
     };
-  }, [timeoutId]);
+  }, [timeoutId, isDemoMode]);
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-blue-900 via-purple-900 to-black text-white">
@@ -284,6 +317,11 @@ export default function StoryPage() {
             <p className="text-lg text-gray-300">
               Page {currentPage} of 5
             </p>
+          )}
+          {isDemoMode && (
+            <div className="mt-2 inline-block bg-purple-600/50 px-4 py-2 rounded-full text-sm border border-purple-400">
+              🎭 Demo Mode: Using browser voice
+            </div>
           )}
         </div>
 
