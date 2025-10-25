@@ -12,6 +12,7 @@ import VoiceIndicator from '../../components/VoiceIndicator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
 
 export default function StoryPage() {
   const params = useParams();
@@ -369,61 +370,31 @@ export default function StoryPage() {
   }, [timeoutId, isDemoMode]);
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-950 text-white overflow-hidden animate-gradient">
-      {/* Enhanced Stars background */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none opacity-50">
-        {[...Array(100)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute bg-white rounded-full animate-twinkle"
-            style={{
-              width: `${Math.random() * 3 + 1}px`,
-              height: `${Math.random() * 3 + 1}px`,
-              top: `${Math.random() * 100}%`,
-              left: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 5}s`,
-              animationDuration: `${2 + Math.random() * 3}s`
-            }}
-          />
-        ))}
-      </div>
+    <main className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 overflow-hidden relative">
+      {/* Subtle background pattern */}
+      <div className="fixed inset-0 opacity-[0.03] pointer-events-none" 
+           style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23000000\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }} 
+      />
 
-      {/* Floating decorations */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none opacity-20">
-        <div className="absolute top-20 right-10 text-6xl animate-float">⭐</div>
-        <div className="absolute bottom-20 left-10 text-5xl animate-float" style={{ animationDelay: '1s' }}>🌙</div>
-      </div>
-
-      <div className="relative z-10 container mx-auto px-4 py-6 sm:py-10 max-w-6xl">
-        {/* Header */}
-        <div className="text-center mb-6 sm:mb-10 space-y-4">
-          <div className="inline-block animate-float">
-            <h1 className="text-4xl sm:text-5xl md:text-7xl font-black bg-gradient-to-r from-yellow-300 via-yellow-400 to-orange-400 text-transparent bg-clip-text drop-shadow-[0_2px_10px_rgba(251,191,36,0.5)] tracking-tight">
+      <div className="relative z-10 container mx-auto px-4 py-4 sm:py-8 max-w-5xl min-h-screen flex flex-col">
+        {/* Book Title Header */}
+        <div className="text-center mb-4 sm:mb-6">
+          <div className="inline-block">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-transparent bg-clip-text tracking-tight">
               🚀 Space Adventure
             </h1>
           </div>
           
-          {/* Progress Badge */}
-          {currentPage > 0 && (
-            <div className="flex flex-col items-center gap-3">
-              <Badge className="bg-gradient-to-r from-yellow-400 to-orange-400 text-gray-900 hover:from-yellow-500 hover:to-orange-500 px-5 py-2 text-base sm:text-lg font-bold shadow-lg">
-                Page {currentPage} of 5
-              </Badge>
-              {/* Progress Bar */}
-              <Progress value={(currentPage / 5) * 100} className="w-64 h-2" />
-            </div>
-          )}
-          
           {/* Demo Mode Badge */}
           {isDemoMode && (
-            <Badge variant="outline" className="bg-purple-900/50 border-purple-400 text-purple-200 px-4 py-2 text-sm font-semibold">
-              🎭 Demo Mode: Using browser voice
+            <Badge variant="outline" className="mt-3 bg-purple-100 dark:bg-purple-900/50 border-purple-400 text-purple-700 dark:text-purple-200 px-3 py-1 text-xs font-semibold">
+              🎭 Demo Mode
             </Badge>
           )}
         </div>
 
-        {/* Content Area */}
-        <div className="space-y-6">
+        {/* Book Page Content */}
+        <div className="flex-1 flex flex-col">
           {/* Photo Upload Stage - Temporarily disabled for Vapi testing */}
           {false && !photoUrl && (
             <div className="glass-dark rounded-3xl p-8 border border-yellow-400/30 shadow-2xl">
@@ -434,86 +405,115 @@ export default function StoryPage() {
             </div>
           )}
 
-          {/* Welcome Stage - Show while initializing */}
+          {/* Welcome Stage - Show while initializing - Book Page Style */}
           {!photoUrl && (
-            <Card className="relative bg-gradient-to-br from-blue-900/80 via-purple-900/80 to-indigo-900/80 border-2 border-yellow-400/40 shadow-2xl backdrop-blur-md overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 animate-pulse"></div>
-              <CardContent className="relative z-10 text-center pt-12 pb-12 px-6">
-                <div className="text-7xl sm:text-8xl mb-8 animate-float">🚀</div>
-                <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-yellow-300 mb-6 drop-shadow-lg">
+            <div className="relative flex-1 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-slate-800 dark:to-slate-900 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] border-4 border-amber-200 dark:border-amber-900 p-8 sm:p-12 overflow-hidden"
+                 style={{
+                   backgroundImage: 'linear-gradient(to right, rgba(0,0,0,0.02) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.02) 1px, transparent 1px)',
+                   backgroundSize: '20px 20px'
+                 }}>
+              {/* Book spine shadow */}
+              <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-black/10 to-transparent pointer-events-none" />
+              
+              <div className="relative z-10 text-center flex flex-col items-center justify-center h-full">
+                <div className="text-6xl sm:text-7xl mb-8 animate-float">🚀</div>
+                <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-foreground mb-6 font-serif">
                   Welcome, Space Explorer!
                 </h2>
-                <p className="text-lg sm:text-xl text-gray-100 mb-10 max-w-2xl mx-auto leading-relaxed">
+                <p className="text-lg sm:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed font-serif">
                   Captain Verne is getting ready to guide you on an amazing space adventure!
                 </p>
                 <div className="flex justify-center">
                   <VoiceIndicator isActive={isCaptainSpeaking} />
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+              
+              {/* Page number at bottom */}
+              <div className="absolute bottom-6 right-8 text-sm text-muted-foreground font-serif italic">
+                Page {currentPage} of 5
+              </div>
+            </div>
           )}
 
-          {/* Story Stage - Show panels when conversation progresses */}
+          {/* Story Stage - Book Page Style */}
           {currentPage > 1 && (
-            <>
-              {/* Comic Panels */}
-              <div className="mb-6">
-                <StoryPanel
-                  panel1Url={panel1Url}
-                  panel2Url={panel2Url}
-                  loading={imagesLoading}
-                />
-              </div>
+            <div className="relative flex-1 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-slate-800 dark:to-slate-900 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] border-4 border-amber-200 dark:border-amber-900 p-6 sm:p-10 overflow-y-auto"
+                 style={{
+                   backgroundImage: 'linear-gradient(to right, rgba(0,0,0,0.02) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.02) 1px, transparent 1px)',
+                   backgroundSize: '20px 20px'
+                 }}>
+              {/* Book spine shadow */}
+              <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-black/10 to-transparent pointer-events-none" />
+              
+              <div className="relative z-10 space-y-6 pb-16">
+                {/* Story Image */}
+                <div className="mb-6">
+                  <StoryPanel
+                    panel1Url={panel1Url}
+                    panel2Url={panel2Url}
+                    loading={imagesLoading}
+                  />
+                </div>
 
-              {/* Story Text - Show what Captain Verne said */}
-              {(currentStoryText || lastTranscript) && (
-                <Card className="bg-gradient-to-br from-gray-900/70 to-gray-800/70 border-2 border-yellow-400/30 backdrop-blur-md shadow-2xl">
-                  <CardContent className="p-6 sm:p-10">
-                    <p className="text-lg sm:text-xl md:text-2xl leading-relaxed text-center text-gray-100 font-medium">
+                {/* Story Text */}
+                {(currentStoryText || lastTranscript) && (
+                  <div className="bg-white/50 dark:bg-slate-900/50 rounded-xl p-6 sm:p-8 border border-amber-300 dark:border-amber-800">
+                    <p className="text-base sm:text-lg md:text-xl leading-relaxed text-foreground font-serif text-justify">
                       {currentStoryText}
                     </p>
-                  </CardContent>
-                </Card>
-              )}
+                  </div>
+                )}
 
-              {/* Voice Indicator */}
-              <Card className="bg-gradient-to-br from-gray-900/60 to-gray-800/60 border-2 border-yellow-400/20 backdrop-blur-sm shadow-xl">
-                <CardContent className="p-4">
+                {/* Voice Indicator */}
+                <div className="bg-white/50 dark:bg-slate-900/50 rounded-xl p-4 border border-amber-300 dark:border-amber-800">
                   <VoiceIndicator
                     isSpeaking={isCaptainSpeaking}
                     isListening={isListening}
                   />
-                </CardContent>
-              </Card>
+                </div>
 
-              {/* Suggested Options Display */}
-              {suggestedOptions && suggestedOptions.length > 0 && !isCaptainSpeaking && (
-                <Card className="bg-gradient-to-br from-blue-900/60 to-purple-900/60 border-2 border-blue-400/30 backdrop-blur-md shadow-xl">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="text-center text-blue-300 text-xl sm:text-2xl font-bold flex items-center justify-center gap-2">
+                {/* Suggested Options */}
+                {suggestedOptions && suggestedOptions.length > 0 && !isCaptainSpeaking && (
+                  <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-6 border-2 border-blue-300 dark:border-blue-800">
+                    <h3 className="text-center text-foreground text-lg sm:text-xl font-bold mb-4 font-serif flex items-center justify-center gap-2">
                       <span>💡</span>
-                      <span>Suggestions</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="px-6 pb-6">
-                    <div className="flex flex-wrap gap-3 justify-center mb-5">
+                      <span>What would you like to do?</span>
+                    </h3>
+                    <div className="flex flex-wrap gap-3 justify-center mb-4">
                       {suggestedOptions.map((option, idx) => (
                         <Badge
                           key={idx}
                           variant="outline"
-                          className="bg-blue-800/40 border-blue-400/50 text-white hover:bg-blue-700/60 px-4 py-2 text-sm sm:text-base font-medium transition-all duration-300 cursor-default shadow-md"
+                          className="bg-white dark:bg-slate-800 border-blue-400 text-foreground hover:bg-blue-100 dark:hover:bg-blue-900 px-4 py-2 text-sm sm:text-base font-medium transition-all duration-300 cursor-default shadow-md"
                         >
                           {option}
                         </Badge>
                       ))}
                     </div>
-                    <p className="text-xs sm:text-sm text-gray-300 text-center font-medium">
-                      ✨ Or say anything you want!
+                    <p className="text-xs sm:text-sm text-muted-foreground text-center font-serif italic">
+                      ✨ Or say anything you imagine!
                     </p>
-                  </CardContent>
-                </Card>
-              )}
-            </>
+                  </div>
+                )}
+
+                {/* End Story Button */}
+                <div className="flex justify-center pt-4">
+                  <Button 
+                    variant="outline" 
+                    size="lg"
+                    onClick={handleStoryComplete}
+                    className="bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40 font-semibold shadow-md"
+                  >
+                    📖 Finish & Get My Book
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Page number at bottom right */}
+              <div className="absolute bottom-6 right-8 text-sm text-muted-foreground font-serif italic">
+                Page {currentPage} of 5
+              </div>
+            </div>
           )}
 
           {/* Waiting for Vapi to start */}
