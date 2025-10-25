@@ -143,20 +143,13 @@ class VapiClient {
             },
             voice: {
               provider: '11labs',
-              voiceId: '21m00Tcm4TlvDq8ikWAM', // Rachel - calm female voice
-              stability: 0.5,
-              similarityBoost: 0.75
+              voiceId: '21m00Tcm4TlvDq8ikWAM' // Rachel - calm female voice
             },
             transcriber: {
               provider: 'deepgram',
               model: 'nova-2',
               language: 'en-US'
-            },
-            // Enable continuous conversation
-            silenceTimeoutSeconds: 30, // Wait 30 seconds for user response
-            responseDelaySeconds: 0.5, // Short delay before responding
-            endCallAfterSilenceSeconds: 60, // End call after 60s of total silence
-            backgroundSound: 'off' // No background sound
+            }
           };
 
       console.log('📞 Initiating call with config:', JSON.stringify(config, null, 2));
