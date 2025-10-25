@@ -47,10 +47,16 @@ export default function StoryPage() {
   });
   const [isDemoMode, setIsDemoMode] = useState(false);
 
-  // Initialize session
+  // Initialize session and start Vapi immediately (skip photo upload for testing)
   useEffect(() => {
     setSessionId(sessionId);
-  }, [sessionId, setSessionId]);
+    // Auto-start Vapi after a short delay
+    const timer = setTimeout(() => {
+      initializeVapi();
+    }, 500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]);
 
   // Handle photo selection
   const handlePhotoSelected = async (file: File) => {
@@ -89,25 +95,31 @@ export default function StoryPage() {
       onSpeechEnd: () => {
         setCaptainSpeaking(false);
         setIsListening(true);
-        startInteraction();
-        
-        // Set 10-second timeout for kid's response
-        const timeout = setTimeout(() => {
-          console.log('10 second timeout - using default path');
-          handleDefaultPath();
-        }, 10000);
-        setTimeoutId(timeout);
+        console.log('🎤 Captain finished speaking - waiting for kid response...');
       },
       onMessage: (message: any) => {
-        if (message.type === 'transcript' && message.role === 'user') {
+        console.log('📨 Vapi message:', message);
+        
+        // Track assistant messages
+        if (message.type === 'transcript' && message.role === 'assistant') {
+          console.log('🤖 Captain says:', message.transcript);
           setLastTranscript(message.transcript);
-          // Clear timeout when kid responds
-          if (timeoutId) {
-            clearTimeout(timeoutId);
-            setTimeoutId(null);
-          }
-          // Process the response
-          handleKidResponse(message.transcript);
+        }
+        
+        // Track user messages (but don't interrupt the flow!)
+        if (message.type === 'transcript' && message.role === 'user') {
+          console.log('👦 Kid says:', message.transcript);
+          setLastTranscript(message.transcript);
+          setIsListening(false);
+          
+          // Just track it for analytics - Vapi will handle the response
+          trackInteraction({
+            sessionId,
+            pageNumber: currentPage,
+            interactionType: 'voice_input',
+            userInput: message.transcript,
+            responseTimeMs: Date.now()
+          }).catch(err => console.log('Track error:', err));
         }
       },
       onError: (error: any) => {
@@ -327,13 +339,27 @@ export default function StoryPage() {
 
         {/* Content Area */}
         <div className="space-y-6">
-          {/* Photo Upload Stage */}
-          {!photoUrl && (
+          {/* Photo Upload Stage - Temporarily disabled for Vapi testing */}
+          {false && !photoUrl && (
             <div className="bg-gradient-to-br from-purple-800/30 to-blue-800/30 rounded-3xl p-8 backdrop-blur-sm border border-yellow-400/30">
               <PhotoUpload
                 onPhotoSelected={handlePhotoSelected}
                 loading={photoUploading}
               />
+            </div>
+          )}
+
+          {/* Welcome Stage - Show while initializing */}
+          {!photoUrl && (
+            <div className="bg-gradient-to-br from-blue-800/50 to-purple-800/50 rounded-2xl p-8 backdrop-blur-sm border border-yellow-400/30 text-center">
+              <div className="text-6xl mb-4">🚀</div>
+              <h2 className="text-3xl font-bold text-yellow-300 mb-4">Welcome, Space Explorer!</h2>
+              <p className="text-xl text-gray-200 mb-6">
+                Captain Verne is getting ready to guide you on an amazing space adventure!
+              </p>
+              <div className="flex justify-center">
+                <VoiceIndicator isActive={isCaptainSpeaking} />
+              </div>
             </div>
           )}
 
