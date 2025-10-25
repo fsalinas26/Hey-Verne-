@@ -3,6 +3,11 @@
 import { useEffect, useState } from 'react';
 import { getDashboardAnalytics } from '../lib/api';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface DashboardData {
   totalSessions: number;
@@ -38,25 +43,43 @@ export default function StatsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-900 to-black text-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl mb-4 animate-bounce">📊</div>
-          <p className="text-xl">Loading analytics...</p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-slate-950 dark:via-purple-950 dark:to-slate-900 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md text-center bg-card/80 backdrop-blur-md shadow-2xl">
+          <CardContent className="pt-12 pb-12">
+            <div className="text-7xl sm:text-8xl mb-8 animate-float">📊</div>
+            <CardTitle className="text-2xl sm:text-3xl font-black text-foreground mb-4">
+              Loading Analytics
+            </CardTitle>
+            <div className="space-y-3 max-w-xs mx-auto">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/4 mx-auto" />
+              <Skeleton className="h-4 w-5/6 mx-auto" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   if (!data) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-900 to-black text-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl mb-4">❌</div>
-          <p className="text-xl">No data available</p>
-          <a href="/" className="text-blue-300 underline mt-4 block">
-            Go to Home
-          </a>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-slate-950 dark:via-purple-950 dark:to-slate-900 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md text-center bg-card/80 backdrop-blur-md shadow-2xl">
+          <CardContent className="pt-12 pb-12">
+            <div className="text-7xl sm:text-8xl mb-6">❌</div>
+            <CardTitle className="text-2xl sm:text-3xl font-black text-foreground mb-4">
+              No Data Available
+            </CardTitle>
+            <p className="text-muted-foreground mb-8 text-base">
+              No analytics data has been collected yet. Start an adventure first!
+            </p>
+            <Button size="lg" asChild className="shadow-lg">
+              <a href="/">
+                🏠 Go to Home
+              </a>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -64,81 +87,98 @@ export default function StatsPage() {
   const COLORS = ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4'];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-900 via-purple-900 to-black text-white">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-slate-950 dark:via-purple-950 dark:to-slate-900">
+      <div className="container mx-auto px-4 py-8 sm:py-12 max-w-7xl">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-4">
-            <h1 className="text-4xl md:text-5xl font-bold text-yellow-300">
-              📊 Analytics Dashboard
-            </h1>
-            <a
-              href="/"
-              className="bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-500 transition-colors"
-            >
-              🏠 Home
-            </a>
+        <div className="mb-8 sm:mb-12">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 sm:gap-6 mb-6">
+            <div className="inline-block animate-float">
+              <h1 className="text-4xl sm:text-5xl md:text-7xl font-black bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-transparent bg-clip-text tracking-tight text-center sm:text-left">
+                📊 Analytics Dashboard
+              </h1>
+            </div>
+            <Button size="lg" variant="outline" asChild className="shadow-md hover:shadow-lg">
+              <a href="/" className="flex items-center gap-2">
+                🏠 Home
+              </a>
+            </Button>
           </div>
-          <p className="text-gray-300 text-lg">
-            Insights for parents, teachers, and child psychologists
+          <p className="text-muted-foreground text-base sm:text-lg text-center sm:text-left max-w-2xl">
+            ✨ Insights for parents, teachers, and child psychologists
           </p>
         </div>
 
         {/* Overall Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-blue-600/50 rounded-xl p-6 backdrop-blur-sm border border-blue-400/30">
-            <div className="text-3xl mb-2">📚</div>
-            <div className="text-3xl font-bold mb-1">{data.totalSessions}</div>
-            <div className="text-sm text-gray-200">Total Adventures</div>
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-10 sm:mb-12">
+          <Card className="bg-card/80 backdrop-blur-md border-2 border-blue-400/20 hover:border-blue-400/40 hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
+            <CardContent className="pt-6 pb-6 text-center">
+              <div className="text-4xl sm:text-5xl mb-4 animate-float">📚</div>
+              <div className="text-3xl sm:text-4xl font-black mb-2 bg-gradient-to-r from-blue-600 to-purple-600 text-transparent bg-clip-text">
+                {data.totalSessions}
+              </div>
+              <div className="text-sm font-semibold text-muted-foreground">Total Adventures</div>
+            </CardContent>
+          </Card>
           
-          <div className="bg-green-600/50 rounded-xl p-6 backdrop-blur-sm border border-green-400/30">
-            <div className="text-3xl mb-2">✅</div>
-            <div className="text-3xl font-bold mb-1">{data.completedSessions}</div>
-            <div className="text-sm text-gray-200">Completed</div>
-          </div>
+          <Card className="bg-card/80 backdrop-blur-md border-2 border-green-400/20 hover:border-green-400/40 hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
+            <CardContent className="pt-6 pb-6 text-center">
+              <div className="text-4xl sm:text-5xl mb-4 animate-float" style={{ animationDelay: '0.2s' }}>✅</div>
+              <div className="text-3xl sm:text-4xl font-black mb-2 bg-gradient-to-r from-green-600 to-emerald-600 text-transparent bg-clip-text">
+                {data.completedSessions}
+              </div>
+              <div className="text-sm font-semibold text-muted-foreground">Completed</div>
+            </CardContent>
+          </Card>
           
-          <div className="bg-yellow-600/50 rounded-xl p-6 backdrop-blur-sm border border-yellow-400/30">
-            <div className="text-3xl mb-2">📈</div>
-            <div className="text-3xl font-bold mb-1">{(parseFloat(data.completionRate) * 100).toFixed(0)}%</div>
-            <div className="text-sm text-gray-200">Completion Rate</div>
-          </div>
+          <Card className="bg-card/80 backdrop-blur-md border-2 border-yellow-400/20 hover:border-yellow-400/40 hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
+            <CardContent className="pt-6 pb-6 text-center">
+              <div className="text-4xl sm:text-5xl mb-4 animate-float" style={{ animationDelay: '0.4s' }}>📈</div>
+              <div className="text-3xl sm:text-4xl font-black mb-2 bg-gradient-to-r from-yellow-600 to-orange-600 text-transparent bg-clip-text">
+                {(parseFloat(data.completionRate) * 100).toFixed(0)}%
+              </div>
+              <div className="text-sm font-semibold text-muted-foreground">Completion Rate</div>
+            </CardContent>
+          </Card>
           
-          <div className="bg-purple-600/50 rounded-xl p-6 backdrop-blur-sm border border-purple-400/30">
-            <div className="text-3xl mb-2">⏱️</div>
-            <div className="text-3xl font-bold mb-1">{Math.round(data.avgSessionTime / 60)}min</div>
-            <div className="text-sm text-gray-200">Avg Duration</div>
-          </div>
+          <Card className="bg-card/80 backdrop-blur-md border-2 border-purple-400/20 hover:border-purple-400/40 hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
+            <CardContent className="pt-6 pb-6 text-center">
+              <div className="text-4xl sm:text-5xl mb-4 animate-float" style={{ animationDelay: '0.6s' }}>⏱️</div>
+              <div className="text-3xl sm:text-4xl font-black mb-2 bg-gradient-to-r from-purple-600 to-pink-600 text-transparent bg-clip-text">
+                {Math.round(data.avgSessionTime / 60)}min
+              </div>
+              <div className="text-sm font-semibold text-muted-foreground">Avg Duration</div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex gap-2 mb-6 bg-gray-800/50 p-2 rounded-xl">
+        <div className="glass-dark flex flex-col md:flex-row gap-3 p-3 rounded-2xl mb-8 shadow-xl">
           <button
             onClick={() => setActiveTab('parents')}
-            className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-colors ${
+            className={`flex-1 py-4 px-6 rounded-xl font-bold transition-all duration-300 transform ${
               activeTab === 'parents'
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-300 hover:bg-gray-700'
+                ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg scale-105'
+                : 'text-gray-300 hover:bg-white/10 hover:scale-105'
             }`}
           >
             👪 For Parents
           </button>
           <button
             onClick={() => setActiveTab('teachers')}
-            className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-colors ${
+            className={`flex-1 py-4 px-6 rounded-xl font-bold transition-all duration-300 transform ${
               activeTab === 'teachers'
-                ? 'bg-green-600 text-white'
-                : 'text-gray-300 hover:bg-gray-700'
+                ? 'bg-gradient-to-r from-green-600 to-green-500 text-white shadow-lg scale-105'
+                : 'text-gray-300 hover:bg-white/10 hover:scale-105'
             }`}
           >
             👨‍🏫 For Teachers
           </button>
           <button
             onClick={() => setActiveTab('psychologists')}
-            className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-colors ${
+            className={`flex-1 py-4 px-6 rounded-xl font-bold transition-all duration-300 transform ${
               activeTab === 'psychologists'
-                ? 'bg-purple-600 text-white'
-                : 'text-gray-300 hover:bg-gray-700'
+                ? 'bg-gradient-to-r from-purple-600 to-purple-500 text-white shadow-lg scale-105'
+                : 'text-gray-300 hover:bg-white/10 hover:scale-105'
             }`}
           >
             🧠 For Psychologists

@@ -99,7 +99,7 @@ class StoryGenerator {
 
   getImagePrompts(pageNumber, chosenPlanet = 'Mars') {
     if (pageNumber === 1) {
-      return { panel1: null, panel2: null }; // No images for intro/photo page
+      return { panel1: null }; // No images for intro/photo page
     }
 
     const pageKey = `page${pageNumber}`;
@@ -109,9 +109,9 @@ class StoryGenerator {
       throw new Error(`No image prompts for page: ${pageNumber}`);
     }
 
+    // Only return panel1 - one image per page
     return {
-      panel1: typeof prompts.panel1 === 'function' ? prompts.panel1(chosenPlanet) : prompts.panel1,
-      panel2: typeof prompts.panel2 === 'function' ? prompts.panel2(chosenPlanet) : prompts.panel2
+      panel1: typeof prompts.panel1 === 'function' ? prompts.panel1(chosenPlanet) : prompts.panel1
     };
   }
 
@@ -174,6 +174,103 @@ class StoryGenerator {
     }
 
     return context;
+  }
+
+  // Generate dynamic image prompt based on kid's actual response
+  getDynamicImagePrompt(pageNumber, kidResponse, chosenPlanet = 'Mars') {
+    // Extract celestial bodies or locations mentioned in the response (case-insensitive)
+    const response = kidResponse.toLowerCase();
+    
+    // Common space destinations with vivid descriptions
+    const spaceDestinations = {
+      'moon': { name: 'the Moon', desc: 'grey cratered surface with deep craters and mountains', color: 'silver-grey' },
+      'sun': { name: 'the Sun', desc: 'massive glowing golden sphere with solar flares (viewed from safe distance)', color: 'bright yellow-orange' },
+      'mars': { name: 'Mars', desc: 'rusty red desert planet with enormous canyons and volcanoes', color: 'rusty red' },
+      'jupiter': { name: 'Jupiter', desc: 'giant striped gas planet with the Great Red Spot storm', color: 'orange and brown stripes' },
+      'saturn': { name: 'Saturn', desc: 'beautiful ringed planet with icy rings surrounding it', color: 'pale yellow with white rings' },
+      'venus': { name: 'Venus', desc: 'bright cloudy planet with thick yellow atmosphere', color: 'pale yellow' },
+      'mercury': { name: 'Mercury', desc: 'small grey rocky planet covered in craters', color: 'dark grey' },
+      'uranus': { name: 'Uranus', desc: 'tilted blue-green ice giant with faint rings', color: 'cyan blue' },
+      'neptune': { name: 'Neptune', desc: 'deep blue windy planet with swirling storms', color: 'deep blue' },
+      'pluto': { name: 'Pluto', desc: 'small icy dwarf planet with a heart-shaped ice region', color: 'tan and white' },
+      'earth': { name: 'Earth', desc: 'beautiful blue marble with swirling white clouds and green continents', color: 'blue and green' },
+      'asteroid': { name: 'asteroid belt', desc: 'field of rocky space rocks tumbling through space', color: 'grey and brown' },
+      'comet': { name: 'comet', desc: 'bright glowing comet with a spectacular tail of ice and dust', color: 'white and blue glow' },
+      'star': { name: 'stars', desc: 'countless twinkling stars of different colors filling the cosmos', color: 'white, blue, red sparkles' },
+      'space station': { name: 'space station', desc: 'futuristic orbital station with spinning modules and solar panels', color: 'silver and white' },
+      'black hole': { name: 'black hole', desc: 'mysterious dark void with swirling accretion disk (at safe distance)', color: 'dark with orange glow' },
+      'galaxy': { name: 'galaxy', desc: 'beautiful spiral galaxy with billions of stars swirling', color: 'purple and white spiral' },
+      'nebula': { name: 'nebula', desc: 'colorful glowing cloud of gas and stardust in vibrant colors', color: 'pink, purple, and blue' }
+    };
+
+    // Find what the kid mentioned (case-insensitive)
+    let destination = null;
+    for (const [key, data] of Object.entries(spaceDestinations)) {
+      if (response.includes(key)) {
+        destination = { name: data.name, desc: data.desc, color: data.color, keyword: key };
+        break;
+      }
+    }
+
+    // If no specific destination found, use the chosen planet
+    if (!destination) {
+      const planetKey = chosenPlanet.toLowerCase();
+      const planetData = spaceDestinations[planetKey] || { name: chosenPlanet, desc: 'a fascinating planet', color: 'colorful' };
+      destination = { name: planetData.name, desc: planetData.desc, color: planetData.color, keyword: planetKey };
+    }
+
+    // Varied character descriptions for diversity
+    const poses = [
+      'waving excitedly with both arms up',
+      'floating with arms spread wide in amazement',
+      'pressing hands and face against the window in wonder',
+      'pointing enthusiastically toward space',
+      'doing a happy floating spin',
+      'giving a big thumbs up with a huge smile'
+    ];
+    
+    const emotions = [
+      'eyes wide with wonder and amazement',
+      'laughing with pure joy',
+      'gasping in awe with mouth open',
+      'beaming with excitement',
+      'filled with curiosity and delight',
+      'radiating happiness and adventure'
+    ];
+    
+    // Random elements for variety (using page number as seed)
+    const poseIndex = pageNumber % poses.length;
+    const emotionIndex = (pageNumber + 1) % emotions.length;
+    
+    let prompt = '';
+    
+    if (pageNumber === 2) {
+      // First exploration page - Through window view
+      prompt = `A young child astronaut in a brightly colored space suit (${destination.color} accents visible), ${poses[poseIndex]}, ${emotions[emotionIndex]}. Viewing ${destination.name} through a large curved spacecraft window. ${destination.name} fills the window view showing ${destination.desc}. The window frame has fun glowing buttons and controls. Spectacular space vista. MUST BE UNIQUE: Include unique details like floating star-shaped toys or planet stickers on the window. Children's book illustration, Pixar animation style, vibrant ${destination.color} color scheme, ultra detailed, whimsical, 4K quality.`;
+    } else if (pageNumber === 3) {
+      // Second exploration page - Zero gravity fun
+      prompt = `A young child astronaut ${poses[poseIndex]} in zero gravity inside a colorful spacecraft, ${emotions[emotionIndex]}. ${destination.name} visible through background window showing ${destination.desc}. Floating around: a plush teddy bear, colorful juice pouches, crayons, and small books. Spacecraft has ${destination.color} accent lighting. MUST BE UNIQUE: Add specific objects like floating bubbles or a toy rocket ship. The scene captures the magic of weightlessness. Children's book illustration, Pixar style, playful composition, rich ${destination.color} palette, highly detailed, sense of wonder.`;
+    } else if (pageNumber === 4) {
+      // Landing/arrival page - Epic destination view
+      prompt = `A young child astronaut standing on ${destination.name} surface or floating near it, ${poses[poseIndex]}, ${emotions[emotionIndex]}. ${destination.name} landscape dominates the view with ${destination.desc} prominently featured. Their small spacecraft visible in the distance. Earth as a tiny blue dot far away in the black star-filled sky. MUST BE UNIQUE: Include distinctive ${destination.keyword} features (like ${destination.color} terrain or unique formations). Epic hero shot. Children's book illustration, cinematic composition, breathtaking ${destination.color} vista, Pixar animation quality, inspirational, educational, 4K detailed.`;
+    } else {
+      // Fallback - General adventure
+      prompt = `A young child astronaut on an incredible space adventure near ${destination.name}, ${poses[poseIndex]}, ${emotions[emotionIndex]}. ${destination.desc} creates a stunning backdrop. The scene shows ${destination.color} cosmic beauty. MUST BE UNIQUE: Include whimsical space elements specific to this moment. Children's book illustration, vibrant Pixar style, ${destination.color} color palette, magical, inspiring, highly detailed.`;
+    }
+
+    console.log(`🎨 DYNAMIC IMAGE PROMPT for page ${pageNumber}:`);
+    console.log(`   📍 Destination: ${destination.name} (${destination.keyword})`);
+    console.log(`   🎨 Color theme: ${destination.color}`);
+    console.log(`   💬 Kid mentioned: "${kidResponse}"`);
+    console.log(`   🖼️ Pose: ${poses[poseIndex]}`);
+    console.log(`   😊 Emotion: ${emotions[emotionIndex]}`);
+
+    return {
+      prompt,
+      destination: destination.name,
+      context: kidResponse,
+      colorTheme: destination.color
+    };
   }
 }
 

@@ -80,27 +80,34 @@ router.post('/next-page', async (req, res) => {
 
     // Generate images asynchronously (except for page 1 and 5)
     let panel1TaskId = null;
-    let panel2TaskId = null;
 
-    if (nextPage >= 2 && nextPage <= 4 && session.kid_photo_url) {
-      const prompts = storyGenerator.getImagePrompts(nextPage, chosenPlanet);
-      const photoPath = session.kid_photo_url; // Use path directly
+    if (nextPage >= 2 && nextPage <= 4) {
+      const photoPath = session.kid_photo_url || null; // Optional - use if available
 
       try {
-        // Start image generation with Gemini
-        const task1 = geminiService.generateImage(prompts.panel1, photoPath);
-        const task2 = geminiService.generateImage(prompts.panel2, photoPath);
-
-        const [result1, result2] = await Promise.all([task1, task2]);
+        // Generate dynamic image prompt based on kid's actual response
+        const dynamicPrompt = storyGenerator.getDynamicImagePrompt(
+          nextPage, 
+          kidResponse || '', 
+          chosenPlanet
+        );
+        
+        console.log('🎨 Generating DYNAMIC image for page', nextPage);
+        console.log('📍 Destination mentioned:', dynamicPrompt.destination);
+        console.log('💬 Kid said:', dynamicPrompt.context);
+        console.log('🖼️ Image prompt:', dynamicPrompt.prompt.substring(0, 100) + '...');
+        
+        // Start image generation with Gemini using dynamic prompt
+        const result1 = await geminiService.generateImage(dynamicPrompt.prompt, photoPath);
         
         panel1TaskId = result1.taskId;
-        panel2TaskId = result2.taskId;
 
-        // Store task IDs for polling (Gemini completes immediately, but keeping for compatibility)
+        console.log('✅ Image task created:', {panel1TaskId});
+
+        // Store task ID for polling (Gemini completes immediately, but keeping for compatibility)
         imageGenerationTasks.set(`${sessionId}-${nextPage}-panel1`, panel1TaskId);
-        imageGenerationTasks.set(`${sessionId}-${nextPage}-panel2`, panel2TaskId);
       } catch (error) {
-        console.error('Error starting image generation:', error);
+        console.error('❌ Error starting image generation:', error);
         // Continue without images - will use placeholders
       }
     }
@@ -127,10 +134,8 @@ router.post('/next-page', async (req, res) => {
       suggestedOptions: pageContent.suggestedOptions || [],
       educationalConcept: pageContent.educationalConcept,
       panel1Status: panel1TaskId ? 'generating' : 'none',
-      panel2Status: panel2TaskId ? 'generating' : 'none',
       imageIds: {
-        panel1: panel1TaskId,
-        panel2: panel2TaskId
+        panel1: panel1TaskId
       },
       chosenPlanet
     });

@@ -33,12 +33,29 @@ export default function BookPage() {
   const [book, setBook] = useState<BookData | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Helper function to get full image URL
+  const getFullImageUrl = (url: string | null) => {
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    return `${apiUrl}${url}`;
+  };
+
   useEffect(() => {
     const fetchBook = async () => {
       try {
         const response = await getBook(sessionId);
         if (response.success) {
-          setBook(response.book);
+          // Normalize image URLs
+          const normalizedBook = {
+            ...response.book,
+            pages: response.book.pages.map((page: any) => ({
+              ...page,
+              panel1Url: getFullImageUrl(page.panel1Url),
+              panel2Url: getFullImageUrl(page.panel2Url),
+            })),
+          };
+          setBook(normalizedBook);
         }
       } catch (error) {
         console.error('Error fetching book:', error);

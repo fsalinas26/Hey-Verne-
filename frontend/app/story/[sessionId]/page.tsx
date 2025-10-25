@@ -9,6 +9,9 @@ import { demoVoiceClient } from '../../lib/demoMode';
 import PhotoUpload from '../../components/PhotoUpload';
 import StoryPanel from '../../components/StoryPanel';
 import VoiceIndicator from '../../components/VoiceIndicator';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 
 export default function StoryPage() {
   const params = useParams();
@@ -41,15 +44,16 @@ export default function StoryPage() {
   const [isListening, setIsListening] = useState(false);
   const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
   const [lastTranscript, setLastTranscript] = useState('');
-  const [imageTaskIds, setImageTaskIds] = useState<{ panel1: string | null; panel2: string | null }>({
-    panel1: null,
-    panel2: null
+  const [imageTaskIds, setImageTaskIds] = useState<{ panel1: string | null }>({
+    panel1: null
   });
   const [isDemoMode, setIsDemoMode] = useState(false);
 
   // Initialize session and start Vapi immediately (skip photo upload for testing)
   useEffect(() => {
     setSessionId(sessionId);
+    // Set initial page to 1 immediately
+    setCurrentPage(1);
     // Auto-start Vapi after a short delay
     const timer = setTimeout(() => {
       initializeVapi();
@@ -104,15 +108,16 @@ export default function StoryPage() {
         if (message.type === 'transcript' && message.role === 'assistant') {
           console.log('🤖 Captain says:', message.transcript);
           setLastTranscript(message.transcript);
+          setStoryContent(message.transcript, message.transcript, []);
         }
         
-        // Track user messages (but don't interrupt the flow!)
+        // Track user messages and trigger image generation
         if (message.type === 'transcript' && message.role === 'user') {
           console.log('👦 Kid says:', message.transcript);
           setLastTranscript(message.transcript);
           setIsListening(false);
           
-          // Just track it for analytics - Vapi will handle the response
+          // Track interaction for analytics
           trackInteraction({
             sessionId,
             pageNumber: currentPage,
@@ -120,6 +125,9 @@ export default function StoryPage() {
             userInput: message.transcript,
             responseTimeMs: Date.now()
           }).catch(err => console.log('Track error:', err));
+          
+          // Generate images for this conversation turn
+          generateImagesForConversation(message.transcript);
         }
       },
       onError: (error: any) => {
@@ -135,7 +143,6 @@ export default function StoryPage() {
       .then(() => {
         console.log('✅ Vapi started successfully');
         setVapiInitialized(true);
-        setCurrentPage(1);
       })
       .catch(error => {
         console.warn('⚠️ Vapi failed, switching to DEMO MODE:', error);
@@ -147,7 +154,6 @@ export default function StoryPage() {
           .then(() => {
             console.log('🎭 Demo mode started successfully');
             setVapiInitialized(true);
-            setCurrentPage(1);
           })
           .catch(demoError => {
             console.error('Failed to start demo mode:', demoError);
@@ -155,6 +161,63 @@ export default function StoryPage() {
           });
       });
   }, [vapiInitialized, setCaptainSpeaking, startInteraction, timeoutId]);
+
+  // Generate images based on conversation
+  const generateImagesForConversation = async (kidResponse: string) => {
+    console.log('🎨 Generating images for conversation turn...');
+    console.log('   Session ID:', sessionId);
+    console.log('   Current Page:', currentPage);
+    console.log('   Kid Response:', kidResponse);
+    console.log('   Suggested Options:', suggestedOptions);
+    
+    try {
+      // Call backend to get next page and generate images
+      const payload = {
+        sessionId,
+        currentPage,
+        kidResponse,
+        responseTime: Date.now(),
+        suggestedOptions: suggestedOptions || []
+      };
+      
+      console.log('📤 Sending to backend:', payload);
+      
+      const nextPageData = await getNextPage(payload);
+
+      console.log('📦 Backend response:', nextPageData);
+
+      if (nextPageData.success) {
+        // Update page number first
+        setCurrentPage(nextPageData.pageNumber);
+        
+        // Update story content
+        if (nextPageData.storyText) {
+          setStoryContent(
+            nextPageData.storyText,
+            nextPageData.agentPrompt || '',
+            nextPageData.suggestedOptions || []
+          );
+        }
+        
+        // Handle images if they exist
+        if (nextPageData.imageIds && nextPageData.imageIds.panel1) {
+          console.log('✅ Image generation initiated:', nextPageData.imageIds);
+          
+          // Start loading images
+          setImagesLoading(true);
+          setImageTaskIds(nextPageData.imageIds);
+          setPanelUrls(null, null);
+          
+          // Poll for images
+          pollForImages(nextPageData.imageIds, nextPageData.pageNumber);
+        }
+      } else {
+        console.log('⚠️ Backend request failed:', nextPageData);
+      }
+    } catch (error) {
+      console.error('❌ Error generating images:', error);
+    }
+  };
 
   // Handle kid's voice response
   const handleKidResponse = async (response: string) => {
@@ -203,7 +266,7 @@ export default function StoryPage() {
           }, 5000);
         } else {
           // Start loading images
-          if (nextPageData.imageIds.panel1 || nextPageData.imageIds.panel2) {
+          if (nextPageData.imageIds.panel1) {
             setImagesLoading(true);
             setImageTaskIds(nextPageData.imageIds);
             setPanelUrls(null, null);
@@ -222,8 +285,17 @@ export default function StoryPage() {
     handleKidResponse(''); // Empty response triggers default
   };
 
+  // Helper function to get full image URL
+  const getFullImageUrl = (url: string) => {
+    if (url.startsWith('http')) {
+      return url;
+    }
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    return `${apiUrl}${url}`;
+  };
+
   // Poll for image completion
-  const pollForImages = async (taskIds: { panel1: string | null; panel2: string | null }, pageNumber: number) => {
+  const pollForImages = async (taskIds: { panel1: string | null }, pageNumber: number) => {
     let attempts = 0;
     const maxAttempts = 30;
 
@@ -235,21 +307,16 @@ export default function StoryPage() {
           sessionId,
           pageNumber,
           taskIds.panel1 || undefined,
-          taskIds.panel2 || undefined
+          undefined // No panel2 anymore
         );
 
         if (result.success) {
           const panel1Complete = result.images.find((img: any) => img.panel === 'panel1' && img.status === 'completed');
-          const panel2Complete = result.images.find((img: any) => img.panel === 'panel2' && img.status === 'completed');
 
-          if (panel1Complete && panel2Complete) {
-            setPanelUrls(panel1Complete.url, panel2Complete.url);
+          if (panel1Complete) {
+            setPanelUrls(getFullImageUrl(panel1Complete.url), null);
             setImagesLoading(false);
             return;
-          } else if (panel1Complete) {
-            setPanelUrls(panel1Complete.url, null);
-          } else if (panel2Complete) {
-            setPanelUrls(null, panel2Complete.url);
           }
         }
 
@@ -302,38 +369,56 @@ export default function StoryPage() {
   }, [timeoutId, isDemoMode]);
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-blue-900 via-purple-900 to-black text-white">
-      {/* Stars background */}
+    <main className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-950 text-white overflow-hidden animate-gradient">
+      {/* Enhanced Stars background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none opacity-50">
         {[...Array(100)].map((_, i) => (
           <div
             key={i}
-            className="absolute w-1 h-1 bg-white rounded-full animate-pulse"
+            className="absolute bg-white rounded-full animate-twinkle"
             style={{
+              width: `${Math.random() * 3 + 1}px`,
+              height: `${Math.random() * 3 + 1}px`,
               top: `${Math.random() * 100}%`,
               left: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 3}s`,
-              animationDuration: `${2 + Math.random() * 2}s`
+              animationDelay: `${Math.random() * 5}s`,
+              animationDuration: `${2 + Math.random() * 3}s`
             }}
           />
         ))}
       </div>
 
-      <div className="relative z-10 container mx-auto px-4 py-8 max-w-6xl">
+      {/* Floating decorations */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none opacity-20">
+        <div className="absolute top-20 right-10 text-6xl animate-float">⭐</div>
+        <div className="absolute bottom-20 left-10 text-5xl animate-float" style={{ animationDelay: '1s' }}>🌙</div>
+      </div>
+
+      <div className="relative z-10 container mx-auto px-4 py-6 sm:py-10 max-w-6xl">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl md:text-5xl font-bold text-yellow-300 mb-2">
-            🚀 Space Adventure
-          </h1>
+        <div className="text-center mb-6 sm:mb-10 space-y-4">
+          <div className="inline-block animate-float">
+            <h1 className="text-4xl sm:text-5xl md:text-7xl font-black bg-gradient-to-r from-yellow-300 via-yellow-400 to-orange-400 text-transparent bg-clip-text drop-shadow-[0_2px_10px_rgba(251,191,36,0.5)] tracking-tight">
+              🚀 Space Adventure
+            </h1>
+          </div>
+          
+          {/* Progress Badge */}
           {currentPage > 0 && (
-            <p className="text-lg text-gray-300">
-              Page {currentPage} of 5
-            </p>
-          )}
-          {isDemoMode && (
-            <div className="mt-2 inline-block bg-purple-600/50 px-4 py-2 rounded-full text-sm border border-purple-400">
-              🎭 Demo Mode: Using browser voice
+            <div className="flex flex-col items-center gap-3">
+              <Badge className="bg-gradient-to-r from-yellow-400 to-orange-400 text-gray-900 hover:from-yellow-500 hover:to-orange-500 px-5 py-2 text-base sm:text-lg font-bold shadow-lg">
+                Page {currentPage} of 5
+              </Badge>
+              {/* Progress Bar */}
+              <Progress value={(currentPage / 5) * 100} className="w-64 h-2" />
             </div>
+          )}
+          
+          {/* Demo Mode Badge */}
+          {isDemoMode && (
+            <Badge variant="outline" className="bg-purple-900/50 border-purple-400 text-purple-200 px-4 py-2 text-sm font-semibold">
+              🎭 Demo Mode: Using browser voice
+            </Badge>
           )}
         </div>
 
@@ -341,7 +426,7 @@ export default function StoryPage() {
         <div className="space-y-6">
           {/* Photo Upload Stage - Temporarily disabled for Vapi testing */}
           {false && !photoUrl && (
-            <div className="bg-gradient-to-br from-purple-800/30 to-blue-800/30 rounded-3xl p-8 backdrop-blur-sm border border-yellow-400/30">
+            <div className="glass-dark rounded-3xl p-8 border border-yellow-400/30 shadow-2xl">
               <PhotoUpload
                 onPhotoSelected={handlePhotoSelected}
                 loading={photoUploading}
@@ -351,20 +436,25 @@ export default function StoryPage() {
 
           {/* Welcome Stage - Show while initializing */}
           {!photoUrl && (
-            <div className="bg-gradient-to-br from-blue-800/50 to-purple-800/50 rounded-2xl p-8 backdrop-blur-sm border border-yellow-400/30 text-center">
-              <div className="text-6xl mb-4">🚀</div>
-              <h2 className="text-3xl font-bold text-yellow-300 mb-4">Welcome, Space Explorer!</h2>
-              <p className="text-xl text-gray-200 mb-6">
-                Captain Verne is getting ready to guide you on an amazing space adventure!
-              </p>
-              <div className="flex justify-center">
-                <VoiceIndicator isActive={isCaptainSpeaking} />
-              </div>
-            </div>
+            <Card className="relative bg-gradient-to-br from-blue-900/80 via-purple-900/80 to-indigo-900/80 border-2 border-yellow-400/40 shadow-2xl backdrop-blur-md overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 animate-pulse"></div>
+              <CardContent className="relative z-10 text-center pt-12 pb-12 px-6">
+                <div className="text-7xl sm:text-8xl mb-8 animate-float">🚀</div>
+                <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-yellow-300 mb-6 drop-shadow-lg">
+                  Welcome, Space Explorer!
+                </h2>
+                <p className="text-lg sm:text-xl text-gray-100 mb-10 max-w-2xl mx-auto leading-relaxed">
+                  Captain Verne is getting ready to guide you on an amazing space adventure!
+                </p>
+                <div className="flex justify-center">
+                  <VoiceIndicator isActive={isCaptainSpeaking} />
+                </div>
+              </CardContent>
+            </Card>
           )}
 
-          {/* Story Stage */}
-          {photoUrl && currentPage > 1 && (
+          {/* Story Stage - Show panels when conversation progresses */}
+          {currentPage > 1 && (
             <>
               {/* Comic Panels */}
               <div className="mb-6">
@@ -375,41 +465,53 @@ export default function StoryPage() {
                 />
               </div>
 
-              {/* Story Text */}
-              {currentStoryText && (
-                <div className="bg-gradient-to-br from-blue-800/50 to-purple-800/50 rounded-2xl p-6 backdrop-blur-sm border border-yellow-400/30">
-                  <p className="text-xl md:text-2xl leading-relaxed text-center">
-                    {currentStoryText}
-                  </p>
-                </div>
+              {/* Story Text - Show what Captain Verne said */}
+              {(currentStoryText || lastTranscript) && (
+                <Card className="bg-gradient-to-br from-gray-900/70 to-gray-800/70 border-2 border-yellow-400/30 backdrop-blur-md shadow-2xl">
+                  <CardContent className="p-6 sm:p-10">
+                    <p className="text-lg sm:text-xl md:text-2xl leading-relaxed text-center text-gray-100 font-medium">
+                      {currentStoryText}
+                    </p>
+                  </CardContent>
+                </Card>
               )}
 
               {/* Voice Indicator */}
-              <div className="bg-gradient-to-br from-purple-800/30 to-blue-800/30 rounded-2xl p-4 backdrop-blur-sm border border-yellow-400/20">
-                <VoiceIndicator
-                  isSpeaking={isCaptainSpeaking}
-                  isListening={isListening}
-                />
-              </div>
+              <Card className="bg-gradient-to-br from-gray-900/60 to-gray-800/60 border-2 border-yellow-400/20 backdrop-blur-sm shadow-xl">
+                <CardContent className="p-4">
+                  <VoiceIndicator
+                    isSpeaking={isCaptainSpeaking}
+                    isListening={isListening}
+                  />
+                </CardContent>
+              </Card>
 
               {/* Suggested Options Display */}
               {suggestedOptions && suggestedOptions.length > 0 && !isCaptainSpeaking && (
-                <div className="text-center">
-                  <p className="text-gray-300 mb-2">Suggestions:</p>
-                  <div className="flex flex-wrap gap-2 justify-center">
-                    {suggestedOptions.map((option, idx) => (
-                      <span
-                        key={idx}
-                        className="bg-blue-600/50 px-4 py-2 rounded-full text-sm border border-blue-400"
-                      >
-                        {option}
-                      </span>
-                    ))}
-                  </div>
-                  <p className="text-xs text-gray-400 mt-2">
-                    (You can also say anything you want!)
-                  </p>
-                </div>
+                <Card className="bg-gradient-to-br from-blue-900/60 to-purple-900/60 border-2 border-blue-400/30 backdrop-blur-md shadow-xl">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-center text-blue-300 text-xl sm:text-2xl font-bold flex items-center justify-center gap-2">
+                      <span>💡</span>
+                      <span>Suggestions</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="px-6 pb-6">
+                    <div className="flex flex-wrap gap-3 justify-center mb-5">
+                      {suggestedOptions.map((option, idx) => (
+                        <Badge
+                          key={idx}
+                          variant="outline"
+                          className="bg-blue-800/40 border-blue-400/50 text-white hover:bg-blue-700/60 px-4 py-2 text-sm sm:text-base font-medium transition-all duration-300 cursor-default shadow-md"
+                        >
+                          {option}
+                        </Badge>
+                      ))}
+                    </div>
+                    <p className="text-xs sm:text-sm text-gray-300 text-center font-medium">
+                      ✨ Or say anything you want!
+                    </p>
+                  </CardContent>
+                </Card>
               )}
             </>
           )}

@@ -126,33 +126,37 @@ class VapiClient {
     console.log('🔑 API Key (first 20 chars):', VAPI_PUBLIC_KEY.substring(0, 20) + '...');
 
     try {
-      // Configure assistant - either use ID or inline config (no wrapper!)
-      const config: any = VAPI_ASSISTANT_ID
-        ? {
-            assistantId: VAPI_ASSISTANT_ID
+      // Configure assistant - IMPORTANT: When using assistantId, ONLY pass the ID
+      // The assistant configuration is already defined in Vapi dashboard
+      let config: any;
+      
+      if (VAPI_ASSISTANT_ID) {
+        // Using pre-configured assistant - ONLY pass the ID
+        config = VAPI_ASSISTANT_ID;
+        console.log('📞 Using pre-configured assistant ID:', VAPI_ASSISTANT_ID);
+      } else {
+        // Using inline assistant configuration
+        config = {
+          name: 'Captain Verne',
+          firstMessage: firstMessage || "Hi! I'm Captain Verne! Ready to explore space with me?",
+          model: {
+            provider: 'openai',
+            model: 'gpt-4',
+            temperature: 0.7,
+            systemPrompt: this.getSystemPrompt()
+          },
+          voice: {
+            provider: '11labs',
+            voiceId: '21m00Tcm4TlvDq8ikWAM' // Rachel - calm female voice
+          },
+          transcriber: {
+            provider: 'deepgram',
+            model: 'nova-2',
+            language: 'en-US'
           }
-        : {
-            // Inline assistant configuration - passed directly without 'assistant' wrapper
-            name: 'Captain Verne',
-            firstMessage: firstMessage || "Hi! I'm Captain Verne! Ready to explore space with me?",
-            model: {
-              provider: 'openai',
-              model: 'gpt-4',
-              temperature: 0.7,
-              systemPrompt: this.getSystemPrompt()
-            },
-            voice: {
-              provider: '11labs',
-              voiceId: '21m00Tcm4TlvDq8ikWAM' // Rachel - calm female voice
-            },
-            transcriber: {
-              provider: 'deepgram',
-              model: 'nova-2',
-              language: 'en-US'
-            }
-          };
-
-      console.log('📞 Initiating call with config:', JSON.stringify(config, null, 2));
+        };
+        console.log('📞 Using inline config:', JSON.stringify(config, null, 2));
+      }
       
       const result = await this.vapi.start(config);
       console.log('✅ Call started successfully!', result);

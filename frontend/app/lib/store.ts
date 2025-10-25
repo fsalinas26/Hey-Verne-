@@ -43,7 +43,7 @@ export const useStoryStore = create<StoryState>((set, get) => ({
   // Initial state
   sessionId: null,
   photoUrl: null,
-  currentPage: 0,
+  currentPage: 1, // Start at page 1 (intro page)
   chosenPlanet: 'Mars',
   isVapiActive: false,
   isCaptainSpeaking: false,
@@ -91,7 +91,7 @@ export const useStoryStore = create<StoryState>((set, get) => ({
   reset: () => set({
     sessionId: null,
     photoUrl: null,
-    currentPage: 0,
+    currentPage: 1,
     chosenPlanet: 'Mars',
     isVapiActive: false,
     isCaptainSpeaking: false,

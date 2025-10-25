@@ -82,23 +82,26 @@ export default function PhotoUpload({ onPhotoSelected, loading = false }: PhotoU
 
   if (preview) {
     return (
-      <div className="space-y-4">
-        <div className="relative w-64 h-64 mx-auto rounded-full overflow-hidden border-4 border-yellow-400 shadow-2xl">
-          <Image
-            src={preview}
-            alt="Your photo"
-            fill
-            className="object-cover"
-          />
+      <div className="space-y-6">
+        <div className="relative w-64 h-64 mx-auto">
+          <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full blur-xl opacity-50 animate-pulse"></div>
+          <div className="relative rounded-full overflow-hidden border-4 border-yellow-400 shadow-2xl glow-yellow">
+            <Image
+              src={preview}
+              alt="Your photo"
+              fill
+              className="object-cover"
+            />
+          </div>
         </div>
-        <div className="text-center space-y-2">
-          <p className="text-xl font-semibold">Looking great! 🌟</p>
+        <div className="text-center space-y-3">
+          <p className="text-2xl font-bold text-yellow-300 animate-float">Looking great! 🌟</p>
           <button
             onClick={reset}
-            className="text-blue-300 underline hover:text-blue-200"
+            className="glass px-6 py-2 rounded-full hover:bg-white/20 transition-all duration-300 text-blue-200"
             disabled={loading}
           >
-            Take another photo
+            📸 Take another photo
           </button>
         </div>
       </div>
@@ -107,8 +110,8 @@ export default function PhotoUpload({ onPhotoSelected, loading = false }: PhotoU
 
   if (captureMode === 'camera') {
     return (
-      <div className="space-y-4">
-        <div className="relative w-full max-w-md mx-auto rounded-2xl overflow-hidden border-4 border-yellow-400">
+      <div className="space-y-6">
+        <div className="relative w-full max-w-md mx-auto rounded-3xl overflow-hidden border-4 border-yellow-400 shadow-2xl glow-yellow">
           <video
             ref={videoRef}
             autoPlay
@@ -120,7 +123,7 @@ export default function PhotoUpload({ onPhotoSelected, loading = false }: PhotoU
         <div className="flex gap-4 justify-center">
           <button
             onClick={capturePhoto}
-            className="bg-yellow-400 text-blue-900 font-bold py-3 px-8 rounded-full hover:bg-yellow-300 transition-colors text-lg"
+            className="bg-gradient-to-r from-yellow-400 to-orange-400 text-blue-900 font-bold py-3 px-8 rounded-full hover:from-yellow-300 hover:to-orange-300 transition-all duration-300 text-lg shadow-lg transform hover:scale-105"
           >
             📸 Take Photo
           </button>
@@ -129,9 +132,9 @@ export default function PhotoUpload({ onPhotoSelected, loading = false }: PhotoU
               stopCamera();
               setCaptureMode('choose');
             }}
-            className="bg-gray-600 text-white font-bold py-3 px-8 rounded-full hover:bg-gray-500 transition-colors text-lg"
+            className="glass text-white font-bold py-3 px-8 rounded-full hover:bg-white/20 transition-all duration-300 text-lg"
           >
-            Cancel
+            ✖️ Cancel
           </button>
         </div>
       </div>
@@ -140,7 +143,7 @@ export default function PhotoUpload({ onPhotoSelected, loading = false }: PhotoU
 
   if (captureMode === 'upload') {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <input
           ref={fileInputRef}
           type="file"
@@ -150,45 +153,50 @@ export default function PhotoUpload({ onPhotoSelected, loading = false }: PhotoU
         />
         <div
           onClick={() => fileInputRef.current?.click()}
-          className="w-64 h-64 mx-auto border-4 border-dashed border-yellow-400 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-blue-800/20 transition-colors"
+          className="group w-64 h-64 mx-auto border-4 border-dashed border-yellow-400 rounded-3xl flex flex-col items-center justify-center cursor-pointer hover:bg-blue-800/30 transition-all duration-300 hover:scale-105 hover:border-yellow-300"
         >
-          <div className="text-6xl mb-4">📁</div>
-          <p className="text-xl font-semibold">Choose a photo</p>
+          <div className="text-7xl mb-4 group-hover:animate-float">📁</div>
+          <p className="text-xl font-bold text-yellow-300">Choose a photo</p>
           <p className="text-gray-300 text-sm mt-2">Tap to browse</p>
         </div>
         <button
           onClick={() => setCaptureMode('choose')}
-          className="block mx-auto text-blue-300 underline hover:text-blue-200"
+          className="block mx-auto glass px-6 py-2 rounded-full hover:bg-white/20 transition-all duration-300"
         >
-          Back
+          ← Back
         </button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="w-64 h-64 mx-auto border-4 border-dashed border-yellow-400 rounded-full flex items-center justify-center">
-        <div className="text-8xl">👤</div>
+    <div className="space-y-8">
+      <div className="relative w-64 h-64 mx-auto">
+        <div className="absolute inset-0 bg-yellow-400/20 rounded-full blur-2xl animate-pulse"></div>
+        <div className="relative w-64 h-64 border-4 border-dashed border-yellow-400 rounded-full flex items-center justify-center animate-float">
+          <div className="text-8xl">👤</div>
+        </div>
       </div>
       
       <div className="text-center space-y-4">
-        <p className="text-2xl font-semibold">Let's take a picture of you!</p>
-        <p className="text-gray-300">You'll be the hero of this adventure</p>
+        <p className="text-2xl font-bold text-yellow-300">Let's take a picture of you!</p>
+        <p className="text-gray-200 text-lg">You'll be the hero of this adventure ⭐</p>
       </div>
 
       <div className="flex flex-col gap-4 max-w-sm mx-auto">
         <button
           onClick={startCamera}
-          className="bg-yellow-400 text-blue-900 font-bold py-4 px-8 rounded-full hover:bg-yellow-300 transition-colors text-lg flex items-center justify-center gap-2"
+          className="group bg-gradient-to-r from-yellow-400 to-orange-400 text-blue-900 font-bold py-4 px-8 rounded-full hover:from-yellow-300 hover:to-orange-300 transition-all duration-300 text-lg flex items-center justify-center gap-2 shadow-lg transform hover:scale-105"
         >
-          📷 Use Camera
+          <span className="group-hover:animate-bounce">📷</span>
+          <span>Use Camera</span>
         </button>
         <button
           onClick={() => setCaptureMode('upload')}
-          className="bg-purple-600 text-white font-bold py-4 px-8 rounded-full hover:bg-purple-500 transition-colors text-lg flex items-center justify-center gap-2"
+          className="group glass text-white font-bold py-4 px-8 rounded-full hover:bg-white/20 transition-all duration-300 text-lg flex items-center justify-center gap-2 transform hover:scale-105"
         >
-          📁 Upload Photo
+          <span className="group-hover:animate-bounce">📁</span>
+          <span>Upload Photo</span>
         </button>
       </div>
     </div>
