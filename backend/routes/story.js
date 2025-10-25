@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../services/database');
 const storyGenerator = require('../services/storyGenerator');
-const runwayService = require('../services/runway');
+const geminiService = require('../services/gemini');
 
 // Store in-progress image generation tasks
 const imageGenerationTasks = new Map();
@@ -84,19 +84,19 @@ router.post('/next-page', async (req, res) => {
 
     if (nextPage >= 2 && nextPage <= 4 && session.kid_photo_url) {
       const prompts = storyGenerator.getImagePrompts(nextPage, chosenPlanet);
-      const photoUrl = `${req.protocol}://${req.get('host')}${session.kid_photo_url}`;
+      const photoPath = session.kid_photo_url; // Use path directly
 
       try {
-        // Start image generation (non-blocking)
-        const task1 = runwayService.generateImage(prompts.panel1, photoUrl);
-        const task2 = runwayService.generateImage(prompts.panel2, photoUrl);
+        // Start image generation with Gemini
+        const task1 = geminiService.generateImage(prompts.panel1, photoPath);
+        const task2 = geminiService.generateImage(prompts.panel2, photoPath);
 
         const [result1, result2] = await Promise.all([task1, task2]);
         
         panel1TaskId = result1.taskId;
         panel2TaskId = result2.taskId;
 
-        // Store task IDs for polling
+        // Store task IDs for polling (Gemini completes immediately, but keeping for compatibility)
         imageGenerationTasks.set(`${sessionId}-${nextPage}-panel1`, panel1TaskId);
         imageGenerationTasks.set(`${sessionId}-${nextPage}-panel2`, panel2TaskId);
       } catch (error) {
@@ -159,7 +159,7 @@ router.get('/check-images', async (req, res) => {
     const results = [];
 
     if (taskId1) {
-      const status1 = await runwayService.checkTaskStatus(taskId1);
+      const status1 = await geminiService.checkTaskStatus(taskId1);
       results.push({
         panel: 'panel1',
         taskId: taskId1,
@@ -173,7 +173,7 @@ router.get('/check-images', async (req, res) => {
     }
 
     if (taskId2) {
-      const status2 = await runwayService.checkTaskStatus(taskId2);
+      const status2 = await geminiService.checkTaskStatus(taskId2);
       results.push({
         panel: 'panel2',
         taskId: taskId2,
